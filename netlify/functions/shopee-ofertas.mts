@@ -123,35 +123,45 @@ export default async () => {
 
     console.log("✅ Oferta publicada com sucesso!");
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        message: "Oferta publicada no Telegram!",
-        product: {
-          name: product.productName,
-          price: product.price,
-          discount: product.priceDiscountRate,
-          sales: product.sales,
-          rating: product.ratingStar,
-          link: product.offerLink,
-          itemId: product.itemId,
-        },
-      }),
-    };
+   return new Response(
+  JSON.stringify({
+    success: true,
+    message: "Oferta publicada no Telegram!",
+    product: {
+      name: product.productName,
+      price: product.price,
+      discount: product.priceDiscountRate,
+      sales: product.sales,
+      rating: product.ratingStar,
+      link: product.offerLink,
+      itemId: product.itemId,
+    },
+  }),
+  {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  }
+);
   } catch (error) {
     console.error("❌ Erro na publicação:", error);
 
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Erro desconhecido",
-      }),
-    };
+   return new Response(
+  JSON.stringify({
+    success: false,
+    error:
+      error instanceof Error
+        ? error.message
+        : "Erro desconhecido",
+  }),
+  {
+    status: 500,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  }
+);
   }
 };
 
