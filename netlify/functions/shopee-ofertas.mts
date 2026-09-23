@@ -1,5 +1,4 @@
 import { getStore } from "@netlify/blobs";
-
 import { getShopeeOffers } from "../../src/app/lib/shopee";
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
@@ -46,6 +45,7 @@ function createCaption(product: any) {
 💰 <b>${formatPrice(product.price)}</b>
 
 ${discount}⭐ ${product.ratingStar}/5
+
 🛒 ${product.sales} vendas
 
 🏪 ${product.shopName}
@@ -74,13 +74,11 @@ async function sendTelegramPhoto(
     }),
   });
 
-  const result =
-    (await response.json()) as TelegramResponse;
+  const result = (await response.json()) as TelegramResponse;
 
   if (!response.ok || !result.ok) {
     throw new Error(
-      result.description ||
-        "Erro ao enviar imagem para o Telegram"
+      result.description || "Erro ao enviar imagem para o Telegram"
     );
   }
 
@@ -104,13 +102,11 @@ async function sendTelegramMessage(
     }),
   });
 
-  const result =
-    (await response.json()) as TelegramResponse;
+  const result = (await response.json()) as TelegramResponse;
 
   if (!response.ok || !result.ok) {
     throw new Error(
-      result.description ||
-        "Erro ao enviar mensagem para o Telegram"
+      result.description || "Erro ao enviar mensagem para o Telegram"
     );
   }
 
@@ -131,6 +127,7 @@ function createTextFallback(product: any) {
 💰 <b>${formatPrice(product.price)}</b>
 
 ${discount}⭐ ${product.ratingStar}/5
+
 🛒 ${product.sales} vendas
 
 🏪 ${product.shopName}
@@ -187,7 +184,9 @@ export default async function handler() {
       );
     }
 
-    console.log("🔎 Buscando ofertas na Shopee...");
+    console.log(
+      "🔎 Buscando ofertas na Shopee..."
+    );
 
     const offers = await getShopeeOffers();
 
@@ -214,6 +213,7 @@ export default async function handler() {
      *
      * Agora salvamos objetos completos.
      */
+
     if (Array.isArray(savedHistory)) {
       history = savedHistory
         .map((item: any) => {
@@ -230,8 +230,12 @@ export default async function handler() {
           }
 
           return {
-            itemId: Number(item?.itemId || 0),
-            name: String(item?.name || ""),
+            itemId: Number(
+              item?.itemId || 0
+            ),
+            name: String(
+              item?.name || ""
+            ),
             offerLink: String(
               item?.offerLink || ""
             ),
@@ -240,28 +244,44 @@ export default async function handler() {
             ),
           };
         })
-        .filter((item) => item.itemId > 0);
+        .filter(
+          (item) => item.itemId > 0
+        );
     }
 
     console.log(
       `📦 Produtos já publicados: ${history.length}`
     );
 
+    /*
+     * FILTROS DAS OFERTAS
+     *
+     * ⭐ Avaliação mínima: 4.0
+     * 🛒 Vendas mínimas: 1
+     * 🏷️ Desconto mínimo: 10%
+     *
+     * Também verifica se o produto
+     * já foi publicado anteriormente.
+     */
+
     const filtered = offers.nodes.filter(
       (product: any) => {
-        const rating =
-          Number(product.ratingStar);
+        const rating = Number(
+          product.ratingStar
+        );
 
-        const sales =
-          Number(product.sales);
+        const sales = Number(
+          product.sales
+        );
 
-        const discount =
-          Number(product.priceDiscountRate);
+        const discount = Number(
+          product.priceDiscountRate
+        );
 
         const validOffer =
-          rating >= 4.5 &&
-          sales >= 10 &&
-          discount >= 30;
+          rating >= 4.0 &&
+          sales >= 1 &&
+          discount >= 10;
 
         const alreadyPublished =
           productAlreadyPublished(
@@ -303,6 +323,7 @@ export default async function handler() {
      * Entre as ofertas ainda não publicadas,
      * priorizamos as que possuem mais vendas.
      */
+
     filtered.sort(
       (a: any, b: any) =>
         Number(b.sales) -
@@ -315,6 +336,18 @@ export default async function handler() {
       `🚀 Publicando: ${product.productName}`
     );
 
+    console.log(
+      `⭐ Avaliação: ${product.ratingStar}`
+    );
+
+    console.log(
+      `🛒 Vendas: ${product.sales}`
+    );
+
+    console.log(
+      `🏷️ Desconto: ${product.priceDiscountRate}%`
+    );
+
     const caption =
       createCaption(product);
 
@@ -324,6 +357,7 @@ export default async function handler() {
     /*
      * Primeiro tenta publicar com imagem.
      */
+
     try {
       await sendTelegramPhoto(
         chatId,
@@ -347,6 +381,7 @@ export default async function handler() {
        * Se a imagem da Shopee não funcionar,
        * envia a mesma oferta como texto.
        */
+
       console.log(
         "🔄 Tentando publicar a oferta como texto..."
       );
@@ -379,10 +414,15 @@ export default async function handler() {
      * Só registra no histórico se a publicação
      * realmente aconteceu.
      */
+
     if (publishedSuccessfully) {
       const newHistoryItem: PublishedProduct = {
-        itemId: Number(product.itemId),
-        name: String(product.productName),
+        itemId: Number(
+          product.itemId
+        ),
+        name: String(
+          product.productName
+        ),
         offerLink: String(
           product.offerLink || ""
         ),
@@ -398,6 +438,7 @@ export default async function handler() {
       /*
        * Mantém somente os últimos 100 produtos.
        */
+
       const limitedHistory =
         updatedHistory.slice(-100);
 
