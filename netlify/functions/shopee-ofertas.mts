@@ -1,4 +1,5 @@
 import { getStore } from "@netlify/blobs";
+
 import { getShopeeOffers } from "../../src/app/lib/shopee";
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
@@ -196,6 +197,10 @@ export default async function handler() {
       );
     }
 
+    console.log(
+      `📦 Ofertas encontradas na Shopee: ${offers.nodes.length}`
+    );
+
     const store = getStore("shopee-ofertas");
 
     const savedHistory =
@@ -206,7 +211,7 @@ export default async function handler() {
     let history: PublishedProduct[] = [];
 
     /*
-     * Compatibilidade com o histórico antigo.
+     * Compatibilidade com histórico antigo.
      *
      * Antes salvávamos apenas:
      * [123, 456, 789]
@@ -254,51 +259,35 @@ export default async function handler() {
     );
 
     /*
-     * FILTROS DAS OFERTAS
+     * NÃO existem mais filtros de:
      *
-     * ⭐ Avaliação mínima: 4.0
-     * 🛒 Vendas mínimas: 1
-     * 🏷️ Desconto mínimo: 10%
+     * ⭐ avaliação mínima
+     * 🛒 vendas mínimas
+     * 🏷️ desconto mínimo
      *
-     * Também verifica se o produto
-     * já foi publicado anteriormente.
+     * Agora o bot aceita qualquer produto retornado
+     * pela Shopee, desde que ainda não tenha sido publicado.
      */
 
     const filtered = offers.nodes.filter(
       (product: any) => {
-        const rating = Number(
-          product.ratingStar
-        );
-
-        const sales = Number(
-          product.sales
-        );
-
-        const discount = Number(
-          product.priceDiscountRate
-        );
-
-        const validOffer =
-          rating >= 4.0 &&
-          sales >= 1 &&
-          discount >= 10;
-
         const alreadyPublished =
           productAlreadyPublished(
             product,
             history
           );
 
-        return (
-          validOffer &&
-          !alreadyPublished
-        );
+        return !alreadyPublished;
       }
+    );
+
+    console.log(
+      `🆕 Produtos novos disponíveis: ${filtered.length}`
     );
 
     if (!filtered.length) {
       console.log(
-        "⚠️ Nenhuma oferta nova passou pelos filtros."
+        "⚠️ Nenhuma oferta nova disponível."
       );
 
       return new Response(
@@ -318,17 +307,12 @@ export default async function handler() {
     }
 
     /*
-     * Ordena pelas maiores vendas.
+     * Pega apenas UMA oferta nova por execução.
      *
-     * Entre as ofertas ainda não publicadas,
-     * priorizamos as que possuem mais vendas.
+     * Como o cron roda a cada 10 minutos,
+     * a ideia é publicar aproximadamente
+     * uma oferta a cada 10 minutos.
      */
-
-    filtered.sort(
-      (a: any, b: any) =>
-        Number(b.sales) -
-        Number(a.sales)
-    );
 
     const product = filtered[0];
 
@@ -411,8 +395,8 @@ export default async function handler() {
     }
 
     /*
-     * Só registra no histórico se a publicação
-     * realmente aconteceu.
+     * Só registra no histórico se o Telegram
+     * confirmou a publicação.
      */
 
     if (publishedSuccessfully) {
@@ -502,6 +486,11 @@ export default async function handler() {
   }
 }
 
+/*
+ * Executa a função a cada 10 minutos.
+ */
+
 export const config = {
   schedule: "*/10 * * * *",
 };
+
